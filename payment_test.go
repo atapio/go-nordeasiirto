@@ -49,7 +49,7 @@ func TestSendIBANPayment(t *testing.T) {
 		paymentRequest   *PaymentRequest
 		response         string
 		expectedRequest  map[string]interface{}
-		expectedResponse *PaymentStatusResponse
+		expectedResponse *PaymentResponse
 	}{
 		{
 			title: "company",
@@ -67,7 +67,7 @@ func TestSendIBANPayment(t *testing.T) {
 					"status": "PAID",
 					"archiveReference": "archiveref-123",
 					"fallbackPayment": false,
-					"paymentTime": "2021-05-08T07:05:32Z"
+					"timestamp": "2021-05-08T07:05:32Z"
 				}`,
 			expectedRequest: map[string]interface{}{
 				"lookupId":          "01db84ee-15f8-4b82-9f77-7f6007b2ad77",
@@ -78,11 +78,11 @@ func TestSendIBANPayment(t *testing.T) {
 				"referenceNumber":   "RF111232",
 				"paymentMessage":    "IBAN payment",
 			},
-			expectedResponse: &PaymentStatusResponse{
+			expectedResponse: &PaymentResponse{
 				Status:           "PAID",
 				ArchiveReference: "archiveref-123",
 				FallbackPayment:  false,
-				PaymentTime:      time.Date(2021, 5, 8, 7, 5, 32, 0, time.UTC),
+				Timestamp:        time.Date(2021, 5, 8, 7, 5, 32, 0, time.UTC),
 			},
 		},
 		{
@@ -113,11 +113,11 @@ func TestSendIBANPayment(t *testing.T) {
 				"referenceNumber":   "RF111232",
 				"paymentMessage":    "IBAN payment",
 			},
-			expectedResponse: &PaymentStatusResponse{
+			expectedResponse: &PaymentResponse{
 				Status:           "PROCESSING",
 				ArchiveReference: "archiveref-123",
 				FallbackPayment:  false,
-				PaymentTime:      time.Time{},
+				Timestamp:        time.Time{},
 			},
 		},
 	}

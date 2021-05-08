@@ -12,7 +12,7 @@ const (
 )
 
 type PaymentService interface {
-	SendIBANPayment(context.Context, *PaymentRequest) (*PaymentStatusResponse, *Response, error)
+	SendIBANPayment(context.Context, *PaymentRequest) (*PaymentResponse, *Response, error)
 	GetStatus(context.Context, string) (*PaymentStatusResponse, *Response, error)
 }
 
@@ -38,6 +38,13 @@ type PaymentRequest struct {
 	BenecifiaryIdentifier string   `json:"beneficiaryIdentifier,omitempty"`
 }
 
+type PaymentResponse struct {
+	Status           string    `json:"status"`
+	ArchiveReference string    `json:"archiveReference"`
+	FallbackPayment  bool      `json:"fallbackPaymet"`
+	Timestamp        time.Time `json:"timestamp"`
+}
+
 type PaymentStatusResponse struct {
 	Status           string    `json:"status"`
 	ArchiveReference string    `json:"archiveReference"`
@@ -46,7 +53,7 @@ type PaymentStatusResponse struct {
 }
 
 // SendIBANPayment sends a payment to an IBAN bank account
-func (s *PaymentServiceOp) SendIBANPayment(ctx context.Context, pr *PaymentRequest) (*PaymentStatusResponse, *Response, error) {
+func (s *PaymentServiceOp) SendIBANPayment(ctx context.Context, pr *PaymentRequest) (*PaymentResponse, *Response, error) {
 	if pr == nil {
 		return nil, nil, NewArgError("paymentRequest", "cannot be nil")
 	}
@@ -58,7 +65,7 @@ func (s *PaymentServiceOp) SendIBANPayment(ctx context.Context, pr *PaymentReque
 		return nil, nil, err
 	}
 
-	paymentResponse := new(PaymentStatusResponse)
+	paymentResponse := new(PaymentResponse)
 	resp, err := s.client.Do(ctx, req, paymentResponse)
 	if err != nil {
 		return nil, resp, err
