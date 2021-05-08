@@ -1,80 +1,86 @@
-package nordeasiirto_test
+package nordeasiirto
 
 import (
 	"context"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"strings"
 	"testing"
-	"time"
 
-	"github.com/atapio/nordeasiirto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestSuccessfulPayment(t *testing.T) {
-	ctx := context.Background()
-	config := &nordeasiirto.Config{
-		Username:    "ME35912345671",
-		Password:    "ee582575-7941-4d5a-b9b9-7a5101c2e2bc",
-		Environment: nordeasiirto.Test,
-	}
+var (
+	mux *http.ServeMux
 
-	client, err := nordeasiirto.NewFromConfig(ctx, config)
-	assert.NoError(t, err)
+	ctx = context.TODO()
 
-	lookup, _, err := client.Lookup.Get(ctx)
-	assert.NoError(t, err)
+	client *Client
 
-	req := &nordeasiirto.PaymentRequest{
-		LookupID:          lookup.ID,
-		BeneAccountNumber: "FI3815723500045661",
-		BeneCompanyName:   "Acme Inc.",
-		Amount:            1000,
-		Currency:          "EUR",
-	}
+	server *httptest.Server
+)
 
-	paymentResp, _, err := client.Payment.SendIBANPayment(ctx, req)
-	require.NoError(t, err)
+func setup() {
+	mux = http.NewServeMux()
+	server = httptest.NewServer(mux)
 
-	assert.Equal(t, "PAID", paymentResp.Status)
-	assert.NotEmpty(t, paymentResp.ArchiveReference)
-	assert.False(t, paymentResp.FallbackPayment)
-	assert.NotEqual(t, paymentResp.Timestamp, time.Time{})
-
-	statusResp, _, err := client.Payment.GetStatus(ctx, lookup.ID)
-	require.NoError(t, err)
-
-	assert.Equal(t, "PAID", statusResp.Status)
-	assert.NotEmpty(t, statusResp.ArchiveReference)
-	assert.False(t, statusResp.FallbackPayment)
-	assert.NotEqual(t, statusResp.PaymentTime, time.Time{})
+	client = NewClient(nil)
+	url, _ := url.Parse(server.URL)
+	client.BaseURL = url
 }
 
-func TestUnsuccessfulPayment(t *testing.T) {
-	ctx := context.Background()
-	config := &nordeasiirto.Config{
-		Username:    "ME35912345671",
-		Password:    "ee582575-7941-4d5a-b9b9-7a5101c2e2bc",
-		Environment: nordeasiirto.Test,
+func teardown() {
+	server.Close()
+}
+
+func testMethod(t *testing.T, r *http.Request, expected string) {
+	if expected != r.Method {
+		t.Errorf("Request method = %v, expected %v", r.Method, expected)
+	}
+}
+
+func TestCheckResponse(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		title    string
+		input    *http.Response
+		expected *ErrorResponse
+	}{
+		{
+			title: "default",
+			input: &http.Response{
+				Request:    &http.Request{},
+				StatusCode: http.StatusBadRequest,
+				Body:       ioutil.NopCloser(strings.NewReader(`{"message":"m"}`)),
+			},
+			expected: &ErrorResponse{
+				Message: "m",
+			},
+		},
+		// ensure that we properly handle API errors that do not contain a
+		// response body
+		{
+			title: "no body",
+			input: &http.Response{
+				Request:    &http.Request{},
+				StatusCode: http.StatusBadRequest,
+				Body:       ioutil.NopCloser(strings.NewReader("")),
+			},
+			expected: &ErrorResponse{},
+		},
 	}
 
-	client, err := nordeasiirto.NewFromConfig(ctx, config)
-	assert.NoError(t, err)
+	for _, tc := range tests {
+		t.Run(tc.title, func(t *testing.T) {
+			err := CheckResponse(tc.input).(*ErrorResponse)
+			require.Error(t, err)
 
-	lookup, _, err := client.Lookup.Get(ctx)
-	assert.NoError(t, err)
-
-	req := &nordeasiirto.PaymentRequest{
-		LookupID:          lookup.ID,
-		BeneAccountNumber: "FI3815723500045661",
-		Amount:            1000,
-		Currency:          "EUR",
+			tc.expected.Response = tc.input
+			assert.Equal(t, tc.expected, err)
+		})
 	}
-
-	_, _, err = client.Payment.SendIBANPayment(ctx, req)
-	assert.Error(t, err, "expected 400")
-	assert.Contains(t, err.Error(), "Bad Request - beneficiary name not valid or missing")
-
-	_, _, err = client.Payment.GetStatus(ctx, lookup.ID)
-	assert.Error(t, err, "expected 404")
-	assert.Contains(t, err.Error(), "Not Found")
 }

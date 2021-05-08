@@ -23,9 +23,7 @@ const (
 	userAgent      = "go-nordeasiirto/" + libraryVersion
 	mediaType      = "application/json"
 
-	authPath        = "auth"
-	lookupUUIDPath  = "lookup/uuid"
-	ibanPaymentPath = "payment/pay"
+	authPath = "auth"
 )
 
 type Client struct {
@@ -196,7 +194,8 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*Res
 		// won't reuse it anyway.
 		const maxBodySlurpSize = 2 << 10
 		if resp.ContentLength == -1 || resp.ContentLength <= maxBodySlurpSize {
-			io.CopyN(ioutil.Discard, resp.Body, maxBodySlurpSize)
+			io.CopyN(ioutil.Discard, resp.Body, maxBodySlurpSize) //nolint:errcheck
+
 		}
 
 		if rerr := resp.Body.Close(); err == nil {

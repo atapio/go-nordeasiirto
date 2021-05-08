@@ -8,11 +8,11 @@ import (
 )
 
 const (
-	LookupBasePath = "/lookup"
+	lookupBasePath = "/lookup"
 )
 
 type LookupService interface {
-	Get(context.Context) (*Lookup, *Response, error)
+	GetUUID(context.Context) (*Lookup, *Response, error)
 }
 
 type Lookup struct {
@@ -27,9 +27,9 @@ type LookupServiceOp struct {
 // assert type-correctness
 var _ LookupService = &LookupServiceOp{}
 
-// Get a Lookup UUID.
-func (s *LookupServiceOp) Get(ctx context.Context) (*Lookup, *Response, error) {
-	path := fmt.Sprintf("%s/uuid", LookupBasePath)
+// GETUUID fetches a Lookup ID for the payment
+func (s *LookupServiceOp) GetUUID(ctx context.Context) (*Lookup, *Response, error) {
+	path := fmt.Sprintf("%s/uuid", lookupBasePath)
 
 	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
 	if err != nil {

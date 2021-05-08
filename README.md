@@ -2,8 +2,7 @@
 
 Nordeasiirto is a Go client library for accessing the [Nordea Siirto for Corporates API](https://www.nordea.fi/Images/146-261077/Nordea_Siirto_for_Corporates_API_specification_(06.2020).pdf).
 
-
-*Note:* Currently only the IBAN payments are implemented.
+**Note:** Currently only the IBAN payments are implemented.
 
 ## Usage
 
@@ -20,7 +19,7 @@ if err != nil {
    log.Fatal(err)
 }
 
-lookup, _, err := client.Lookup.Get(ctx)
+lookup, _, err := client.Lookup.GetUUID(ctx)
 if err != nil {
    log.Fatal(err)
 }

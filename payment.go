@@ -12,7 +12,7 @@ const (
 )
 
 type PaymentService interface {
-	SendIBANPayment(context.Context, *PaymentRequest) (*PaymentResponse, *Response, error)
+	SendIBANPayment(context.Context, *PaymentRequest) (*PaymentStatusResponse, *Response, error)
 	GetStatus(context.Context, string) (*PaymentStatusResponse, *Response, error)
 }
 
@@ -20,6 +20,7 @@ type PaymentServiceOp struct {
 	client *Client
 }
 
+// assert type-correctness
 var _ PaymentService = &PaymentServiceOp{}
 
 type PaymentRequest struct {
@@ -37,13 +38,6 @@ type PaymentRequest struct {
 	BenecifiaryIdentifier string   `json:"beneficiaryIdentifier,omitempty"`
 }
 
-type PaymentResponse struct {
-	Status           string    `json:"status"`
-	ArchiveReference string    `json:"archiveReference"`
-	FallbackPayment  bool      `json:"fallbackPayment"`
-	Timestamp        time.Time `json:"timestamp"`
-}
-
 type PaymentStatusResponse struct {
 	Status           string    `json:"status"`
 	ArchiveReference string    `json:"archiveReference"`
@@ -51,7 +45,8 @@ type PaymentStatusResponse struct {
 	PaymentTime      time.Time `json:"paymentTime"`
 }
 
-func (s *PaymentServiceOp) SendIBANPayment(ctx context.Context, pr *PaymentRequest) (*PaymentResponse, *Response, error) {
+// SendIBANPayment sends a payment to an IBAN bank account
+func (s *PaymentServiceOp) SendIBANPayment(ctx context.Context, pr *PaymentRequest) (*PaymentStatusResponse, *Response, error) {
 	if pr == nil {
 		return nil, nil, NewArgError("paymentRequest", "cannot be nil")
 	}
@@ -63,7 +58,7 @@ func (s *PaymentServiceOp) SendIBANPayment(ctx context.Context, pr *PaymentReque
 		return nil, nil, err
 	}
 
-	paymentResponse := new(PaymentResponse)
+	paymentResponse := new(PaymentStatusResponse)
 	resp, err := s.client.Do(ctx, req, paymentResponse)
 	if err != nil {
 		return nil, resp, err
@@ -72,6 +67,7 @@ func (s *PaymentServiceOp) SendIBANPayment(ctx context.Context, pr *PaymentReque
 	return paymentResponse, resp, nil
 }
 
+// GetStatus queries the payment status of a sent payment
 func (s *PaymentServiceOp) GetStatus(ctx context.Context, lookupID string) (*PaymentStatusResponse, *Response, error) {
 	if lookupID == "" {
 		return nil, nil, NewArgError("lookupID", "cannot be empty")
